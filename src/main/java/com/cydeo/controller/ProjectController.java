@@ -1,115 +1,67 @@
 package com.cydeo.controller;
 
 import com.cydeo.dto.ProjectDTO;
-import com.cydeo.dto.UserDTO;
+import com.cydeo.entity.ResponseWrapper;
 import com.cydeo.service.ProjectService;
-import com.cydeo.service.UserService;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
 import java.util.List;
 
-@Controller
-@RequestMapping("/project")
+@RestController
+@RequestMapping("/api/v1/project")
 public class ProjectController {
 
     private final ProjectService projectService;
-    private final UserService userService;
 
-    public ProjectController(ProjectService projectService, UserService userService) {
+    public ProjectController(ProjectService projectService) {
         this.projectService = projectService;
-        this.userService = userService;
     }
 
-    @GetMapping("/create")
-    public String createProject(Model model) {
+    @GetMapping
+    public ResponseEntity<ResponseWrapper> getProjects(){
+        List<ProjectDTO> projectDTOList = projectService.listAllProjects();
+        return ResponseEntity.ok(new ResponseWrapper("Projects are successfully retrieved",projectDTOList, HttpStatus.OK));
+    }
 
-        model.addAttribute("project", new ProjectDTO());
-        model.addAttribute("projects", projectService.listAllProjectDetails());
-        model.addAttribute("managers", userService.listAllByRole("manager"));
-
-        return "/project/create";
+    @GetMapping("/{code}")
+    public ResponseEntity<ResponseWrapper> getProjectByCode(@PathVariable("code") String code){
+        ProjectDTO projectDTO = projectService.getByProjectCode(code);
+        return ResponseEntity.ok(new ResponseWrapper("Project is successfully retrieved",projectDTO,HttpStatus.OK));
 
     }
 
-    @PostMapping("/create")
-    public String insertProject(@ModelAttribute("project") ProjectDTO project, BindingResult bindingResult, Model model) {
-
-        if (bindingResult.hasErrors()) {
-
-            model.addAttribute("projects", projectService.listAllProjectDetails());
-            model.addAttribute("managers", userService.listAllByRole("manager"));
-
-            return "/project/create";
-
-        }
-
+    @PostMapping
+    public ResponseEntity<ResponseWrapper> createProject(@RequestBody ProjectDTO project){
         projectService.save(project);
-        return "redirect:/project/create";
-
+        return ResponseEntity.status(HttpStatus.CREATED).body(new ResponseWrapper("Project is successfully created",HttpStatus.CREATED));
     }
 
-
-    @GetMapping("/delete/{projectcode}")
-    public String deleteProject(@PathVariable("projectcode") String projectcode) {
-        projectService.delete(projectcode);
-        return "redirect:/project/create";
-    }
-
-    @GetMapping("/complete/{projectcode}")
-    public String completeProject(@PathVariable("projectcode") String projectcode) {
-        projectService.complete(projectcode);
-        return "redirect:/project/create";
-    }
-
-
-
-    @GetMapping("/update/{projectcode}")
-    public String editProject(@PathVariable("projectcode") String projectcode, Model model) {
-
-        model.addAttribute("project", projectService.getByProjectCode(projectcode));
-        model.addAttribute("projects", projectService.listAllProjectDetails());
-        model.addAttribute("managers", userService.listAllByRole("manager"));
-
-        return "/project/update";
-
-    }
-
-    @PostMapping("/update")
-    public String updateProject(@ModelAttribute("project") ProjectDTO project, BindingResult bindingResult, Model model) {
-
-        if (bindingResult.hasErrors()) {
-
-            model.addAttribute("projects", projectService.listAllProjectDetails());
-            model.addAttribute("managers", userService.listAllByRole("manager"));
-
-            return "/project/update";
-
-        }
-
+    @PutMapping
+    public ResponseEntity<ResponseWrapper> updateProject(@RequestBody ProjectDTO project){
         projectService.update(project);
-        return "redirect:/project/create";
-
+        return ResponseEntity.ok(new ResponseWrapper("Project is successfully updated",project,HttpStatus.OK));
     }
 
+    @DeleteMapping("/{projectCode}")
+    public ResponseEntity<ResponseWrapper> deleteProject(@PathVariable("projectCode") String code){
+        projectService.delete(code);
+        return ResponseEntity.ok(new ResponseWrapper("Project is successfully deleted",HttpStatus.OK));
+    }
 
     @GetMapping("/manager/project-status")
-    public String getProjectByManager(Model model) {
+    public ResponseEntity<ResponseWrapper> getProjectByManager(){
+        List<ProjectDTO> projects = projectService.listAllProjectDetails();
+        return ResponseEntity.ok(new ResponseWrapper("Projects are successfully retrieved",projects, HttpStatus.OK));
 
-       List<ProjectDTO> projects = projectService.listAllProjectDetails();
-
-        model.addAttribute("projects", projects);
-
-        return "/manager/project-status";
     }
 
-    @GetMapping("/manager/complete/{projectCode}")
-    public String managerCompleteProject(@PathVariable("projectCode") String projectCode) {
-        projectService.complete(projectCode);
-        return "redirect:/project/manager/project-status";
-    }
 
+    @PutMapping("/manager/complete/{projectCode}")
+    public ResponseEntity<ResponseWrapper> managerCompleteProject(@PathVariable("projectCode") String code){
+        projectService.complete(code);
+        return ResponseEntity.ok(new ResponseWrapper("Project is successfully completed",HttpStatus.OK));
+
+    }
 }
